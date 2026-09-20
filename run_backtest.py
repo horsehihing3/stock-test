@@ -19,6 +19,9 @@ END = date.today()
 
 # 기간 정의 — DB 에 period 라벨로 구분 저장되어 두 구간을 나란히 볼 수 있다
 PERIODS = {
+    "6M":   {"label": "최근 6개월",
+             "start": END - timedelta(days=182), "end": END,
+             "note": "최근 반년 · 표본이 매우 짧아 순위는 참고만"},
     "1Y":   {"label": "최근 1년",
              "start": END - timedelta(days=365), "end": END,
              "note": "최근 12개월 · 표본이 짧아 순위는 노이즈로 봐야 함"},

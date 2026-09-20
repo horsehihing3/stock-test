@@ -44,6 +44,7 @@ SL_LEVELS = list(strategies.STOP_LOSS_LEVELS) + [15.0]
 
 END = date.today()
 PERIODS = {
+    "6M": END - timedelta(days=182),
     "1Y": END - timedelta(days=365),
     "3Y": END - timedelta(days=365 * 3),
     "5Y": END - timedelta(days=365 * 5),
