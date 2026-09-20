@@ -1,0 +1,6 @@
+yfinance
+pandas
+numpy
+fastapi
+uvicorn[standard]
+apscheduler

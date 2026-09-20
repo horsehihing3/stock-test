@@ -1,0 +1,10 @@
+﻿__pycache__/
+*.pyc
+.venv/
+venv/
+*.db
+*.db-journal
+.git/
+.gitignore
+BRIEFING_*.md
+DESIGN_*.md

@@ -1,0 +1,7 @@
+﻿__pycache__/
+*.pyc
+.venv/
+venv/
+market_data.db
+market_data.db-journal
+.DS_Store

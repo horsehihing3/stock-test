@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>파라미터 최적화 — 백테스트 대시보드</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root { --bg:#0f1115; --card:#181b22; --line:#272b35; --fg:#e6e8ee; --muted:#8b93a7;
+          --up:#22c55e; --down:#ef4444; --accent:#5b9bff; --gold:#fbbf24; }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:24px; background:var(--bg); color:var(--fg);
+         font-family:"Segoe UI","Malgun Gothic",sans-serif; }
+  a { color:var(--accent); text-decoration:none; }
+  .topbar { display:flex; align-items:center; justify-content:space-between;
+            gap:16px; flex-wrap:wrap; margin-bottom:6px; }
+  h1 { font-size:20px; margin:0; }
+  .panel { background:var(--card); border:1px solid var(--line); border-radius:12px;
+           padding:16px; margin-bottom:20px; }
+  .panel h2 { font-size:14px; color:var(--muted); margin:0 0 12px; font-weight:600; }
+  .hint { color:var(--muted); font-weight:400; font-size:12px; }
+  .desc { color:var(--muted); font-size:13px; margin:0 0 18px; }
+  select { background:var(--card); color:var(--fg); border:1px solid var(--line);
+           border-radius:8px; padding:8px 12px; font-size:14px; font-family:inherit; }
+  .btn { background:var(--accent); color:#0b1020; border:none; border-radius:8px;
+         padding:9px 16px; font-size:13px; font-weight:700; cursor:pointer;
+         font-family:inherit; }
+  .btn:hover { filter:brightness(1.12); }
+  .btn:disabled { opacity:.55; cursor:progress; }
+  .btn.ghost { background:transparent; color:var(--muted); border:1px solid var(--line); }
+  .ctl { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .ctl label { color:var(--muted); font-size:12px; }
+  .status { margin-left:auto; color:var(--muted); font-size:12px; }
+
+  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px; }
+  .top { border:1px solid var(--line); border-radius:12px; padding:14px 16px;
+         background:rgba(255,255,255,.02); }
+  .top.c1 { border-color:rgba(251,191,36,.55); background:rgba(251,191,36,.08); }
+  .top.c2 { border-color:rgba(34,197,94,.5);  background:rgba(34,197,94,.08); }
+  .top.c3 { border-color:rgba(91,155,255,.5); background:rgba(91,155,255,.08); }
+  .top .rank { font-size:12px; font-weight:700; color:var(--muted); }
+  .top .headline { font-size:24px; font-weight:700; margin:6px 0 2px; }
+  .top .sub { font-size:12px; color:var(--muted); margin-bottom:10px; }
+  .params { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+  .chip { font-size:11px; padding:3px 8px; border-radius:999px;
+          border:1px solid var(--line); background:rgba(255,255,255,.04); }
+  .kv { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; font-size:12px; }
+  .kv div span { display:block; color:var(--muted); font-size:10.5px; }
+
+  .chart-wrap { position:relative; height:420px; }
+  .tabs { display:inline-flex; gap:4px; background:var(--card);
+          border:1px solid var(--line); border-radius:10px; padding:4px; }
+  .tab { background:transparent; color:var(--muted); border:none; border-radius:7px;
+         padding:6px 12px; font-size:12px; font-weight:600; cursor:pointer; font-family:inherit; }
+  .tab.active { background:var(--accent); color:#0b1020; }
+
+  .scroll { overflow-x:auto; max-height:560px; overflow-y:auto; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th,td { padding:7px 10px; text-align:right; border-bottom:1px solid var(--line);
+          white-space:nowrap; }
+  th:first-child,td:first-child { text-align:left; }
+  th { color:var(--muted); font-weight:600; cursor:pointer; user-select:none;
+       position:sticky; top:0; background:var(--card); z-index:1; }
+  th:hover { color:var(--fg); }
+  th .ar { color:var(--accent); font-size:10px; }
+  tbody tr:hover td { background:rgba(255,255,255,.04); }
+  .pos { color:var(--up); } .neg { color:var(--down); }
+  input[type=search] { background:var(--card); color:var(--fg); border:1px solid var(--line);
+                       border-radius:8px; padding:7px 12px; font-size:13px; width:220px;
+                       font-family:inherit; }
+  .empty { color:var(--muted); padding:24px; text-align:center; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>🔬 파라미터 최적화 <span class="hint" id="metaLabel"></span></h1>
+  <a class="btn ghost" href="/">← 메인 대시보드</a>
+</div>
+<div class="desc" id="gridDesc"></div>
+
+<div class="panel">
+  <div class="ctl" style="margin-bottom:12px">
+    <label>탐색 모드</label>
+    <div class="tabs" id="modeTabs"></div>
+  </div>
+  <div class="ctl">
+    <label>대상 종목</label><select id="scope"></select>
+    <label>기간</label><select id="period"></select>
+    <label>손절 기준</label><select id="sl"></select>
+    <button class="btn" id="run">최적화 백테스트 실행</button>
+    <button class="btn ghost" id="force" title="캐시를 무시하고 다시 계산">재계산</button>
+    <span class="status" id="status"></span>
+  </div>
+</div>
+
+<div class="panel"><h2>TOP 3 추천 조합</h2>
+  <div class="cards" id="topCards"><div class="empty">실행 버튼을 눌러 주세요.</div></div>
+</div>
+
+<div class="panel">
+  <h2 id="heatTitle">분포
+    <span class="hint">같은 (tp1, tp2) 칸의 여러 물타기·매수량 조합 중 최고값을 표시</span>
+  </h2>
+  <div class="ctl" style="margin-bottom:12px">
+    <div class="tabs" id="metricTabs">
+      <button class="tab active" data-m="total_return_pct">총수익률</button>
+      <button class="tab" data-m="calmar_ratio">Calmar</button>
+      <button class="tab" data-m="mdd_pct">MDD</button>
+      <button class="tab" data-m="win_rate_pct">승률</button>
+    </div>
+  </div>
+  <div class="chart-wrap"><canvas id="heat"></canvas></div>
+</div>
+
+<div class="panel">
+  <h2>전체 조합 랭킹 <span class="hint" id="rankCount"></span></h2>
+  <div class="ctl" style="margin-bottom:12px">
+    <input type="search" id="q" placeholder="검색 (예: 10 / 60 / 50)">
+    <span class="hint">헤더를 클릭하면 정렬됩니다</span>
+  </div>
+  <div class="scroll"><table id="rank">
+    <thead><tr id="rankHead"></tr></thead>
+    <tbody></tbody>
+  </table></div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const fmt = (v,d=2) => Number(v).toFixed(d);
+const cls = v => v >= 0 ? 'pos' : 'neg';
+const esc = s => String(s ?? '').replace(/[<>&"]/g,
+  c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+
+let META = null, ROWS = [], METRIC = 'total_return_pct';
+let MODE = 'basic', COLS = [], LAB = {};
+let sortKey = 'calmar_ratio', sortDir = -1, heat;
+// 모드별 히트맵 축 (x, y)
+const AXES = { basic: ['tp1','tp2'], detail: ['rsi_buy','trailing_stop'] };
+const NO_PCT = ['sma_period','rsi_buy'];        // 퍼센트가 아닌 파라미터
+const NEG = ['drop_rate','trailing_stop'];      // 음수로 표기할 파라미터
+const unitOf = c => NO_PCT.includes(c) ? '' : '%';
+const signOf = c => NEG.includes(c) ? '-' : '';
+
+async function init() {
+  META = await (await fetch('/api/optimize/meta')).json();
+  LAB = META.param_labels;
+  MODE = META.default.mode;
+  $('modeTabs').innerHTML = META.modes.map(m =>
+    `<button class="tab ${m.name === MODE ? 'active' : ''}" data-mode="${esc(m.name)}">`
+    + `${esc(m.label)} (${m.total})</button>`).join('');
+  renderModeInfo();
+  $('scope').innerHTML = `<option value="ALL">전체 ${META.tickers.length}종목</option>`
+    + META.tickers.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
+  $('period').innerHTML = META.periods.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
+  $('sl').innerHTML = META.stop_loss_levels
+    .map(v => `<option value="${v}">${v}%</option>`).join('');
+  $('scope').value = META.default.scope;
+  $('period').value = META.default.period;
+  $('sl').value = META.default.sl;
+}
+
+function modeDef() { return META.modes.find(m => m.name === MODE); }
+
+function renderModeInfo() {
+  const m = modeDef();
+  COLS = m.cols;
+  $('metaLabel').textContent = `— ${META.strategy.label} · ${m.label} · ${m.total}개 조합`
+    + (MODE === 'basic' ? ' (tp1 ≥ tp2 자동 제외)' : '');
+  const g = m.grid;
+  $('gridDesc').textContent = '탐색 범위 · ' + COLS.map(c => {
+    const vals = g[c];
+    return `${LAB[c]} ${vals.map(v => signOf(c) + v).join('/')}${unitOf(c)}`;
+  }).join(' · ');
+  const [ax, ay] = AXES[MODE];
+  $('heatTitle').innerHTML = `${LAB[ax]} × ${LAB[ay]} 분포 `
+    + `<span class="hint">같은 칸의 나머지 파라미터 조합 중 최고값을 표시</span>`;
+  $('rankHead').innerHTML = '<th data-k="_rank">순위</th>'
+    + COLS.map(c => `<th data-k="${c}">${LAB[c]}${unitOf(c)}</th>`).join('')
+    + ['total_return_pct|총수익률%', 'mdd_pct|MDD%', 'sharpe_ratio|Sharpe',
+       'calmar_ratio|Calmar', 'win_rate_pct|승률%', 'total_trades|거래']
+      .map(x => { const [k, l] = x.split('|'); return `<th data-k="${k}">${l}</th>`; }).join('');
+}
+
+async function run(force = false) {
+  const btns = [$('run'), $('force')];
+  btns.forEach(b => b.disabled = true);
+  $('status').textContent = force ? '재계산 중… (수십 초 소요)' : '실행 중…';
+  try {
+    const q = `scope=${encodeURIComponent($('scope').value)}`
+            + `&period=${encodeURIComponent($('period').value)}`
+            + `&sl=${$('sl').value}&mode=${encodeURIComponent(MODE)}`
+            + `${force ? '&force=true' : ''}`;
+    const r = await fetch(`/api/optimize?${q}`, { method: 'POST' });
+    if (!r.ok) throw new Error((await r.json()).detail ?? `HTTP ${r.status}`);
+    const d = await r.json();
+    ROWS = d.rows;
+    $('status').textContent =
+      `${d.count}개 조합 · ${d.cached ? '캐시' : `${d.elapsed_sec}초 연산`} · `
+      + `${d.scope === 'ALL' ? '전체 종목 평균' : d.scope} / ${d.period} / 손절 ${d.stop_loss_pct}%`;
+    renderTop(d.top);
+    renderHeat();
+    renderRank();
+  } catch (e) {
+    $('status').textContent = `실패: ${e.message}`;
+    $('topCards').innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+  } finally {
+    btns.forEach(b => b.disabled = false);
+  }
+}
+
+function paramChips(r) {
+  return '<div class="params">' + COLS.map(c =>
+    `<span class="chip">${LAB[c]} ${signOf(c)}${r[c]}${unitOf(c)}</span>`).join('') + '</div>';
+}
+
+function renderTop(top) {
+  const defs = [
+    ['c1', '① 최고 Calmar — 위험 대비 수익 최적', top.calmar, 'calmar_ratio', v => fmt(v,2), 'Calmar'],
+    ['c2', '② 최고 총수익률 — 수익 극대화', top.return, 'total_return_pct', v => fmt(v,2)+'%', '총수익률'],
+    ['c3', '③ 최저 MDD — 안정성 최적', top.mdd, 'mdd_pct', v => fmt(v,2)+'%', 'MDD'],
+  ];
+  $('topCards').innerHTML = defs.map(([c, title, r, key, f, unit]) => `
+    <div class="top ${c}">
+      <div class="rank">${esc(title)}</div>
+      <div class="headline ${key === 'mdd_pct' ? 'neg' : cls(r[key])}">${f(r[key])}</div>
+      <div class="sub">${unit} 기준 1위</div>
+      ${paramChips(r)}
+      <div class="kv">
+        <div><span>총수익률</span><b class="${cls(r.total_return_pct)}">${fmt(r.total_return_pct)}%</b></div>
+        <div><span>MDD</span><b class="neg">${fmt(r.mdd_pct)}%</b></div>
+        <div><span>Calmar</span><b>${fmt(r.calmar_ratio)}</b></div>
+        <div><span>승률</span><b>${fmt(r.win_rate_pct,1)}%</b></div>
+      </div>
+    </div>`).join('');
+}
+
+// (tp1, tp2) 칸마다 최고값을 뽑아 버블 산점도로 표시
+function renderHeat() {
+  const [AX, AY] = AXES[MODE];
+  const best = new Map();
+  for (const r of ROWS) {
+    const k = `${r[AX]}|${r[AY]}`;
+    const v = r[METRIC];
+    const cur = best.get(k);
+    if (!cur || v > cur[METRIC]) best.set(k, r);
+  }
+  const pts = [...best.values()];
+  const vals = pts.map(r => r[METRIC]);
+  const lo = Math.min(...vals), hi = Math.max(...vals), span = (hi - lo) || 1;
+  const color = v => {
+    const t = (v - lo) / span;                     // 0~1
+    const c = METRIC === 'mdd_pct' ? [239,68,68] : [34,197,94];
+    return `rgba(${c[0]},${c[1]},${c[2]},${(0.15 + 0.75 * t).toFixed(2)})`;
+  };
+  heat?.destroy();
+  heat = new Chart($('heat'), {
+    type: 'bubble',
+    data: { datasets: [{
+      label: $('metricTabs').querySelector('.tab.active').textContent,
+      data: pts.map(r => ({ x: r[AX], y: r[AY], r: 8 + 14 * ((r[METRIC] - lo) / span), raw: r })),
+      backgroundColor: pts.map(r => color(r[METRIC])),
+      borderColor: 'rgba(255,255,255,.18)', borderWidth: 1,
+    }]},
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => {
+          const r = c.raw.raw;
+          return [COLS.map(k => `${LAB[k]} ${r[k]}`).join(' · '),
+                  `수익률 ${fmt(r.total_return_pct)}% · MDD ${fmt(r.mdd_pct)}%`,
+                  `Calmar ${fmt(r.calmar_ratio)} · 승률 ${fmt(r.win_rate_pct,1)}%`];
+        }}},
+      },
+      scales: {
+        x: { title: { display: true, text: LAB[AX], color: '#8b93a7' },
+             ticks: { color: '#8b93a7' }, grid: { color: 'rgba(255,255,255,.05)' },
+             min: Math.min(...pts.map(p => p[AX])) - 5,
+             max: Math.max(...pts.map(p => p[AX])) + 5 },
+        y: { title: { display: true, text: LAB[AY], color: '#8b93a7' },
+             ticks: { color: '#8b93a7' }, grid: { color: 'rgba(255,255,255,.05)' },
+             min: Math.min(...pts.map(p => p[AY])) - 3,
+             max: Math.max(...pts.map(p => p[AY])) + 3 },
+      },
+    },
+  });
+}
+
+function renderRank() {
+  const q = $('q').value.trim();
+  let rows = ROWS.slice();
+  if (q) {
+    const terms = q.split(/\s+/);
+    rows = rows.filter(r => terms.every(t =>
+      [...COLS.map(c => r[c]), fmt(r.total_return_pct),
+       fmt(r.mdd_pct), fmt(r.calmar_ratio)].join(' ').includes(t)));
+  }
+  rows.sort((a, b) => (a[sortKey] - b[sortKey]) * sortDir);
+  $('rankCount').textContent = `${rows.length} / ${ROWS.length}개`;
+  $('rank').querySelector('tbody').innerHTML = rows.slice(0, 300).map((r, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      ${COLS.map(c => `<td>${signOf(c)}${r[c]}</td>`).join('')}
+      <td class="${cls(r.total_return_pct)}">${fmt(r.total_return_pct)}</td>
+      <td class="neg">${fmt(r.mdd_pct)}</td>
+      <td class="${cls(r.sharpe_ratio)}">${fmt(r.sharpe_ratio,3)}</td>
+      <td class="${cls(r.calmar_ratio)}">${fmt(r.calmar_ratio,2)}</td>
+      <td>${fmt(r.win_rate_pct,1)}</td>
+      <td>${r.total_trades}</td>
+    </tr>`).join('') || `<tr><td colspan="${COLS.length + 7}" class="empty">결과 없음</td></tr>`;
+  $('rank').querySelectorAll('th').forEach(th => {
+    const on = th.dataset.k === sortKey;
+    th.innerHTML = th.textContent.replace(/[▲▼]\s*$/, '').trim()
+      + (on ? ` <span class="ar">${sortDir < 0 ? '▼' : '▲'}</span>` : '');
+  });
+}
+
+$('modeTabs').addEventListener('click', e => {
+  const t = e.target.closest('.tab');
+  if (!t || t.dataset.mode === MODE) return;
+  MODE = t.dataset.mode;
+  $('modeTabs').querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x === t));
+  sortKey = 'calmar_ratio'; sortDir = -1;
+  renderModeInfo();
+  run(false);
+});
+$('run').addEventListener('click', () => run(false));
+$('force').addEventListener('click', () => run(true));
+$('q').addEventListener('input', renderRank);
+$('metricTabs').addEventListener('click', e => {
+  const t = e.target.closest('.tab');
+  if (!t) return;
+  METRIC = t.dataset.m;
+  $('metricTabs').querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x === t));
+  renderHeat();
+});
+$('rank').querySelector('thead').addEventListener('click', e => {
+  const th = e.target.closest('th');
+  if (!th || th.dataset.k === '_rank') return;
+  if (sortKey === th.dataset.k) sortDir *= -1;
+  else { sortKey = th.dataset.k; sortDir = -1; }
+  renderRank();
+});
+
+init().then(() => run(false));
+</script>
+</body>
+</html>

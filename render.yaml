@@ -1,0 +1,43 @@
+# Render 배포 설정 (https://render.com)
+#
+# ⚠️ 무료(free) 플랜 제약 — 반드시 읽고 선택할 것
+#   1) 영구 디스크(disk)를 붙일 수 없다. 재배포·재시작 시 market_data.db 가 사라진다.
+#      -> 기동 시 DB 가 비어 있으면 app.py 가 자동으로 백테스트를 1회 돌려 복구한다.
+#   2) 15분간 요청이 없으면 인스턴스가 잠든다. 잠든 동안에는 APScheduler 도 멈춘다.
+#      -> 07:00 / 09:05 스케줄을 확실히 돌리려면 아래 중 하나가 필요하다.
+#         (a) 외부 업타임 모니터로 5~10분마다 /api/status 를 호출해 깨워 두기 (무료)
+#         (b) starter 이상 플랜으로 올려 always-on + disk 사용 (유료)
+#
+# 유료로 올릴 때는 plan 을 starter 로 바꾸고 아래 disk 블록의 주석을 해제한다.
+
+services:
+  - type: web
+    name: soongi-backtest
+    runtime: python
+    plan: free
+    region: singapore              # 한국에서 가장 가까운 무료 리전
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/status
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.13.7"
+      - key: SCHEDULER_TZ
+        value: Asia/Seoul
+      - key: ENABLE_SCHEDULER
+        value: "1"
+      - key: OPT_WORKERS         # 무료 인스턴스는 CPU 가 작다
+        value: "2"
+      - key: TZ
+        value: Asia/Seoul
+
+    # --- 유료 플랜에서만 사용 가능 (DB 영구 보존) ---
+    # plan: starter
+    # disk:
+    #   name: market-data
+    #   mountPath: /var/data
+    #   sizeGB: 1
+    # envVars 에 아래를 추가하면 DB 가 디스크에 저장된다
+    #   - key: DB_PATH
+    #     value: /var/data/market_data.db
