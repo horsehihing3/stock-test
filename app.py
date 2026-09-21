@@ -389,7 +389,7 @@ def stoploss_comparison(period: str | None = None):
 # 실전 신호 점검 설정 — 상단 손절 버튼과 무관하게 여기 값으로 고정한다
 SIGNAL_STRATEGY = "SoongI_3"   # 확정 대표 전략
 # 숭이 3호는 '매수 4회 소진 후' 에만 비상 손절이 발동해 1~20% 구간 결과가 동일하다
-# (실측: 7종목 평균 수익률·MDD·Calmar 전부 불변). 전략 설계값인 15% 를 쓴다.
+# (실측: 전 종목 평균 수익률·MDD·Calmar 전부 불변). 전략 설계값인 15% 를 쓴다.
 SIGNAL_SL = 15.0
 SIGNAL_YEARS = 3               # 포지션 상태 재현용 재생 기간
 

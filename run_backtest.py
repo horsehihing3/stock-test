@@ -6,7 +6,8 @@ import strategies
 from data_loader import fetch_ohlcv
 from database import init_db, purge_unregistered, save_backtest, set_meta
 
-TICKERS = ["BTC-USD", "NVDA", "AAPL", "QQQ", "SPY", "SLV", "SOXX"]
+TICKERS = ["BTC-USD", "NVDA", "AAPL", "QQQ", "SPY", "SLV", "SOXX",
+           "AVGO", "AMD", "AMAT"]
 # 대표 전략(숭이 3호)을 맨 앞에 둔다 — 대시보드 드롭다운/매트릭스 순서가 이 순서를 따른다
 STRATEGIES = ["SoongI_3", "Gemini_2", "Claude_2", "Gemini_4", "SoongI_1", "SoongI_2"]
 BENCHMARKS = list(strategies.BENCHMARKS)               # ["Buy_Hold"] — 집계 제외

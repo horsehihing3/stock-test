@@ -9,7 +9,8 @@ from data_loader import fetch_ohlcv
 from database import init_db, load_optimization, save_optimization
 
 STRATEGY = "SoongI_3"
-TICKERS = ["BTC-USD", "NVDA", "AAPL", "QQQ", "SPY", "SLV", "SOXX"]
+TICKERS = ["BTC-USD", "NVDA", "AAPL", "QQQ", "SPY", "SLV", "SOXX",
+           "AVGO", "AMD", "AMAT"]
 
 # ---- 기본 모드: 익절/물타기 4개 파라미터 ----
 GRID = {

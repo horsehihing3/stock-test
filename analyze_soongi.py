@@ -16,7 +16,8 @@ PERIOD = sys.argv[1] if len(sys.argv) > 1 else "3Y"
 SL = float(sys.argv[2]) if len(sys.argv) > 2 else 5.0
 SERIES = ["SoongI_1", "SoongI_2", "SoongI_3"]
 LABEL = {s: strategies.LABELS.get(s, s) for s in SERIES}
-TICKERS = ["BTC-USD", "NVDA", "AAPL", "QQQ", "SPY", "SLV", "SOXX"]
+TICKERS = ["BTC-USD", "NVDA", "AAPL", "QQQ", "SPY", "SLV", "SOXX",
+           "AVGO", "AMD", "AMAT"]
 
 
 def bar(t, w=104):
