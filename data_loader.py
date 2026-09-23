@@ -14,6 +14,8 @@ def _normalize(df: pd.DataFrame) -> pd.DataFrame:
         idx = idx.tz_localize(None)
     df.index = idx
     df.index.name = "date"
+    # yfinance 가 장중·미확정 봉을 OHLC 없이(NaN) 주는 경우가 있어 제외한다
+    df = df.dropna(subset=["open", "high", "low", "close"])
     return df[~df.index.duplicated(keep="last")].sort_index()
 
 

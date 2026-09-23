@@ -154,7 +154,7 @@ def load_prices(ticker: str, start: str, end: str) -> pd.DataFrame:
     with get_conn() as conn:
         df = pd.read_sql_query(
             "SELECT date, open, high, low, close, volume FROM stock_data "
-            "WHERE ticker=? AND date BETWEEN ? AND ? ORDER BY date",
+            "WHERE ticker=? AND date BETWEEN ? AND ? AND close IS NOT NULL ORDER BY date",
             conn, params=(ticker, start, end), parse_dates=["date"])
     return df.set_index("date") if not df.empty else df
 
